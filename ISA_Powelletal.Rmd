@@ -1,0 +1,263 @@
+---
+title: "Powelletal_ISA"
+author: "Ashley Powell"
+date: "2025-02-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+#installing IsoformSwitchAnalyzeR
+```{r}
+browseVignettes("IsoformSwitchAnalyzeR") #opens to a well done manual on how to run ISA
+
+BiocManager::install("IsoformSwitchAnalyzeR")
+BiocManager::install("rhdf5")
+```
+
+#libraries used
+```{r}
+library(IsoformSwitchAnalyzeR)
+library(rhdf5)
+library(writexl)
+library(ggpubr)
+library(viridis)
+library(tidyverse)
+library(ggthemes)
+```
+
+#data used
+```{r}
+#Transcript data (RNAseq) from commercial turkey SC libraries previously sequenced (Reed et al., 2022a, b) were used for alternative splicing analyses (NCBI SRA BioProject PRJNA842679).All SC transcript data used can be found at: https://www.ncbi.nlm.nih.gov/bioproject/PRJNA842679
+
+#The reference turkey genome assembly (UMD5.1) and annotation from Ensembl (Meleagris_gallopavo.Turkey_5.1.dna.toplevel.fa genome; Meleagris_gallopavo.Turkey_5.1.109.gtf) were used for all analyses.
+```
+
+#ISA Parameters and Functions Used
+```{r}
+### load data
+#names of the samples used
+sampleID<-c('sample1',
+            'sample2',
+            'sample3',
+            'sample4',
+            'sample5',
+            'sample6',
+            ) 
+
+#conditions for each sample
+condition<-c('control',
+             'control',
+             'hot',
+             'hot',
+             'cold',
+             'cold')
+
+#creation of matrix for data
+iso_matrix<-data.frame(sampleID,condition)
+
+names<-c('sampleID',
+            'condition')
+
+colnames(iso_matrix)<-names
+
+#import Kallisto quanitification data into R
+quant<-importIsoformExpression(
+  parentDir = "pathway to working directory")
+
+#creation of isoformSwitchList; note that Kallisto data will automatically have 'count' and 'abundance' columns
+iso_Switchlist<-  importRdata(
+  isoformCountMatrix = quant$count,
+  isoformRepExpression = quant2$abundance,
+  designMatrix = iso_matrix,
+  isoformExonAnnoation = "pathway to annotation file",
+  isoformNtFasta = "pathway to FASTA files",
+  fixStringTieAnnotationProblem = TRUE,
+  showProgress = FALSE
+)
+
+# filter
+iso_SwitchlistFiltered<-preFilter(
+  switchAnalyzeRlist = iso_Switchlist,
+  geneExpressionCutoff = 1,
+  isoformExpressionCutoff = 0,
+  removeSingleIsoformGenes = TRUE
+)
+
+# test for isoforms with DEXSeq
+iso_SwitchlistAnalyzed<-isoformSwitchTestDEXSeq(
+  switchAnalyzeRlist = iso_SwitchlistFiltered
+)
+
+### analyzing ORFs
+iso_SwitchlistAnalyzed<- analyzeORF(iso_SwitchlistAnalyzed)
+
+# extract sequence data to use for protein predictions
+iso_SwitchlistAnalyzed_<-extractSequence(
+  iso_SwitchlistAnalyzed,
+  pathToOutput = "pathway to where I want sequence data dumped"
+)
+
+#identifying alternative splicing events
+iso_SwitchlistAnalyzed<-analyzeAlternativeSplicing(
+  switchAnalyzeRlist = iso_SwitchlistAnalyzed)
+
+#ranking isoformswitch events 
+consequencesOfInterest <- c('intron_retention', 'tss','tts','last_exon','isoform_seq_similarity','isoform_length', 'exon_number','intron_structure')
+consequencesOfInterest_a <- c('intron_retention')
+consequencesOfInterest_b <- c('tss')
+consequencesOfInterest_c <- c('tts')
+consequencesOfInterest_d <- c('last_exon')
+consequencesOfInterest_e <- c('isoform_seq_similarity')
+consequencesOfInterest_f <- c('isoform_length')
+consequencesOfInterest_g <- c('exon_number')
+consequencesOfInterest_h <- c('intron_structure')
+
+
+iso_SwitchlistAnalyzed<-analyzeSwitchConsequences(
+  iso_SwitchlistAnalyzed,
+  consequencesToAnalyze = consequencesOfInterest,
+  showProgress = TRUE
+)
+
+topSwtiches<-extractTopSwitches(
+  iso_SwitchlistAnalyzed,
+  filterForConsequences = TRUE,
+  n = NA,
+  extractGenes = FALSE,
+  sortByQvals = TRUE
+)
+
+topSwtiches_<-extractTopSwitches(
+  iso_SwitchlistAnalyzed,
+  filterForConsequences = TRUE,
+  n = NA,
+  extractGenes = FALSE,
+  sortByQvals = FALSE
+)
+
+iso_SwitchlistAnalyzed_a<-analyzeSwitchConsequences(
+  iso_SwitchlistAnalyzed,
+  consequencesToAnalyze = consequencesOfInterest_a,
+  showProgress = TRUE
+)
+topSwtiches_a<-extractTopSwitches(
+  iso_SwitchlistAnalyzed_a,
+  filterForConsequences = TRUE,
+  n = NA,
+  extractGenes = FALSE,
+  sortByQvals = FALSE
+)
+
+iso_SwitchlistAnalyzed_b<-analyzeSwitchConsequences(
+  iso_SwitchlistAnalyzed,
+  consequencesToAnalyze = consequencesOfInterest_b,
+  showProgress = TRUE
+)
+topSwtiches_b<-extractTopSwitches(
+  iso_SwitchlistAnalyzed_b,
+  filterForConsequences = TRUE,
+  n = NA,
+  extractGenes = FALSE,
+  sortByQvals = FALSE
+)
+
+iso_SwitchlistAnalyzed_c<-analyzeSwitchConsequences(
+  iso_SwitchlistAnalyzed,
+  consequencesToAnalyze = consequencesOfInterest_c,
+  showProgress = TRUE
+)
+topSwtiches_c<-extractTopSwitches(
+  iso_SwitchlistAnalyzed_c,
+  filterForConsequences = TRUE,
+  n = NA,
+  extractGenes = FALSE,
+  sortByQvals = FALSE
+)
+
+iso_SwitchlistAnalyzed_d<-analyzeSwitchConsequences(
+  iso_SwitchlistAnalyzed,
+  consequencesToAnalyze = consequencesOfInterest_d,
+  showProgress = TRUE
+)
+topSwtiches_d<-extractTopSwitches(
+  iso_SwitchlistAnalyzed_d,
+  filterForConsequences = TRUE,
+  n = NA,
+  extractGenes = FALSE,
+  sortByQvals = FALSE
+)
+
+
+iso_SwitchlistAnalyzed_e<-analyzeSwitchConsequences(
+  iso_SwitchlistAnalyzed,
+  consequencesToAnalyze = consequencesOfInterest_e,
+  showProgress = TRUE
+)
+topSwtiches_e<-extractTopSwitches(
+  iso_SwitchlistAnalyzed_e,
+  filterForConsequences = TRUE,
+  n = NA,
+  extractGenes = FALSE,
+  sortByQvals = FALSE
+)
+
+iso_SwitchlistAnalyzed_f<-analyzeSwitchConsequences(
+  iso_SwitchlistAnalyzed,
+  consequencesToAnalyze = consequencesOfInterest_f,
+  showProgress = TRUE
+)
+
+topSwtiches_f<-extractTopSwitches(
+  iso_SwitchlistAnalyzed_f,
+  filterForConsequences = TRUE,
+  n = NA,
+  extractGenes = FALSE,
+  sortByQvals = FALSE)
+
+iso_SwitchlistAnalyzed_g<-analyzeSwitchConsequences(
+  iso_SwitchlistAnalyzed,
+  consequencesToAnalyze = consequencesOfInterest_g,
+  showProgress = TRUE
+)
+topSwtiches_g<-extractTopSwitches(
+  iso_SwitchlistAnalyzed_g,
+  filterForConsequences = TRUE,
+  n = NA,
+  extractGenes = FALSE,
+  sortByQvals = FALSE
+)
+
+iso_SwitchlistAnalyzed_h<-analyzeSwitchConsequences(
+  iso_SwitchlistAnalyzed,
+  consequencesToAnalyze = consequencesOfInterest_h,
+  showProgress = TRUE
+)
+
+topSwtiches_h<-extractTopSwitches(
+  iso_SwitchlistAnalyzed_h,
+  filterForConsequences = TRUE,
+  n = NA,
+  extractGenes = FALSE,
+  sortByQvals = FALSE
+)
+
+
+# exporting results
+write_xlsx(iso_SwitchlistAnalyzed$isoformFeatures,"IsoF.xlsx") # output that will contain gene names to add to the ISA file
+write_xlsx(iso_SwitchlistAnalyzed$isoformSwitchAnalysis,"ISA.xlsx")
+write_xlsx(iso_SwitchlistAnalyzed$AlternativeSplicingAnalysis,"ASA.xlsx")
+
+write_xlsx(topSwtiches,"all_topSwitches.xlsx")
+write_xlsx(topSwtiches_a,"IR_topSwitches.xlsx")
+write_xlsx(topSwtiches_b,"ATSS_topSwitches.xlsx")
+write_xlsx(topSwtiches_c,"ATTS_topSwitches.xlsx")
+write_xlsx(topSwtiches_d,"lastexon_topSwitches.xlsx")
+write_xlsx(topSwtiches_e,"isosimilarity_topSwitches.xlsx")
+write_xlsx(topSwtiches_f,"isolength_topSwitches.xlsx")
+write_xlsx(topSwtiches_g,"exonnumber_topSwitches.xlsx")
+write_xlsx(topSwtiches_h,"intronstructure_topSwitches.xlsx")
+```
+
+
